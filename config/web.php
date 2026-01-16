@@ -42,6 +42,10 @@ $config = [
             ],
         ],
         'db' => $db,
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
+            // 'cache' => 'cache', // можно включить кеширование для production
+        ],
         /*
         'urlManager' => [
             'enablePrettyUrl' => true,
