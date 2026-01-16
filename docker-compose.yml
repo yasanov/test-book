@@ -1,9 +1,39 @@
-version: '2'
 services:
   php:
-    image: yiisoftware/yii2-php:7.4-apache
+    image: yiisoftware/yii2-php:8.2-apache
+    container_name: books-catalog-php
     volumes:
       - ~/.composer-docker/cache:/root/.composer/cache:delegated
       - ./:/app:delegated
     ports:
-      - '8000:80'
+      - '8001:80'
+    depends_on:
+      - mysql
+    environment:
+      - PHP_IDE_CONFIG=serverName=Docker
+      - DOCKER_ENV=1
+    networks:
+      - books-catalog-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: books-catalog-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: books_catalog
+      MYSQL_USER: catalog
+      MYSQL_PASSWORD: catalog
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - books-catalog-network
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  mysql_data:
+
+networks:
+  books-catalog-network:
+    driver: bridge
