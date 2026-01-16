@@ -1,11 +1,19 @@
 <?php
 
+/**
+ * Database configuration
+ * Автоматически определяет окружение: Docker или локальное
+ */
+$isDocker = getenv('DOCKER_ENV') || (isset($_SERVER['DOCKER_ENV']) && $_SERVER['DOCKER_ENV']);
+
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'mysql:host=localhost;dbname=yii2basic',
-    'username' => 'root',
-    'password' => '',
-    'charset' => 'utf8',
+    'dsn' => $isDocker 
+        ? 'mysql:host=mysql;dbname=books_catalog' 
+        : 'mysql:host=localhost;dbname=books_catalog',
+    'username' => $isDocker ? 'catalog' : 'root',
+    'password' => $isDocker ? 'catalog' : '',
+    'charset' => 'utf8mb4',
 
     // Schema cache options (for production environment)
     //'enableSchemaCache' => true,
