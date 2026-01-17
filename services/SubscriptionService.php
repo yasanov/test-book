@@ -36,8 +36,25 @@ class SubscriptionService
         $subscription->author_id = $authorId;
         $subscription->load($data);
 
+        // Проверка на дубликаты перед валидацией
+        $email = $subscription->email ?? '';
+        $phone = $subscription->phone ?? '';
+        if ($email && $phone && $this->subscriptionRepository->exists($authorId, $email, $phone)) {
+            throw new ServiceException('Вы уже подписаны на этого автора с данным email и телефоном.');
+        }
+
+        // Валидация данных
+        if (!$subscription->validate()) {
+            $errors = $subscription->getFirstErrors();
+            $errorMessage = !empty($errors) ? reset($errors) : 'Ошибка валидации данных подписки.';
+            throw new ServiceException($errorMessage);
+        }
+
+        // Сохранение
         if (!$this->subscriptionRepository->save($subscription)) {
-            throw new ServiceException('Не удалось создать подписку.');
+            $errors = $subscription->getFirstErrors();
+            $errorMessage = !empty($errors) ? reset($errors) : 'Не удалось создать подписку.';
+            throw new ServiceException($errorMessage);
         }
 
         return $subscription;
