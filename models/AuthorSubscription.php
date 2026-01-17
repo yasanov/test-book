@@ -84,18 +84,4 @@ class AuthorSubscription extends ActiveRecord
         return $this->hasOne(Author::class, ['id' => 'author_id']);
     }
 
-    /**
-     * Check if subscription exists for author, email and phone
-     *
-     * @param int $authorId
-     * @param string $email
-     * @param string $phone
-     * @return bool
-     */
-    public static function exists(int $authorId, string $email, string $phone): bool
-    {
-        return static::find()
-            ->where(['author_id' => $authorId, 'email' => $email, 'phone' => $phone])
-            ->exists();
-    }
 }
