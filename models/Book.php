@@ -115,73 +115,22 @@ class Book extends ActiveRecord
     }
 
     /**
-     * Upload cover image
-     *
-     * @return bool
-     */
-    public function uploadCoverImage(): bool
-    {
-        if ($this->coverImageFile === null) {
-            return true;
-        }
-
-        $uploadPath = Yii::getAlias('@webroot/uploads/books');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0777, true);
-        }
-
-        $fileName = (string)time() . '_' . Yii::$app->security->generateRandomString(10) . '.' . $this->coverImageFile->extension;
-        $filePath = $uploadPath . '/' . $fileName;
-
-        if ($this->coverImageFile->saveAs($filePath)) {
-            // Удаляем старое изображение, если оно существует
-            if ($this->cover_image !== null && $this->cover_image !== '' && file_exists(Yii::getAlias('@webroot') . $this->cover_image)) {
-                @unlink(Yii::getAlias('@webroot') . $this->cover_image);
-            }
-            $this->cover_image = '/uploads/books/' . $fileName;
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Gets cover image URL
+     * Gets cover image URL from S3
      *
      * @return string|null
      */
     public function getCoverImageUrl(): ?string
     {
-        if ($this->cover_image !== null && $this->cover_image !== '') {
-            return $this->cover_image;
+        if ($this->cover_image === null || $this->cover_image === '') {
+            return null;
         }
-        return null;
-    }
 
-    /**
-     * Before save event
-     */
-    public function beforeSave($insert): bool
-    {
-        if (parent::beforeSave($insert)) {
-            // Загружаем изображение, если оно было загружено
-            if ($this->coverImageFile !== null) {
-                $this->uploadCoverImage();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * After delete event
-     */
-    public function afterDelete(): void
-    {
-        parent::afterDelete();
-        // Удаляем файл обложки
-        if ($this->cover_image !== null && $this->cover_image !== '' && file_exists(Yii::getAlias('@webroot') . $this->cover_image)) {
-            @unlink(Yii::getAlias('@webroot') . $this->cover_image);
+        try {
+            $storageService = Yii::$container->get(\app\services\StorageService::class);
+            return $storageService->getFileUrl($this->cover_image);
+        } catch (\Exception $e) {
+            Yii::error('Ошибка получения URL изображения: ' . $e->getMessage(), 'book');
+            return null;
         }
     }
 }

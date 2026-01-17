@@ -12,6 +12,7 @@ use app\repositories\ReportRepository;
 use app\services\AuthorService;
 use app\services\BookService;
 use app\services\ReportService;
+use app\services\StorageService;
 use app\services\SubscriptionService;
 use Yii;
 
@@ -37,11 +38,13 @@ class DIBootstrap implements \yii\base\BootstrapInterface
 
         // Register services with dependencies
         Yii::$container->setDefinitions([
+            StorageService::class => StorageService::class,
             BookService::class => function ($container, $params, $config) {
                 return new BookService(
                     $container->get(BookRepository::class),
                     $container->get(AuthorRepository::class),
-                    $container->get(BookAuthorRepository::class)
+                    $container->get(BookAuthorRepository::class),
+                    $container->get(StorageService::class)
                 );
             },
             AuthorService::class => function ($container, $params, $config) {

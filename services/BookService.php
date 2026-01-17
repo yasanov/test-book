@@ -11,6 +11,7 @@ use app\models\Author;
 use app\repositories\AuthorRepository;
 use app\repositories\BookAuthorRepository;
 use app\repositories\BookRepository;
+use app\services\StorageService;
 use yii\data\ActiveDataProvider;
 use yii\web\UploadedFile;
 
@@ -19,7 +20,8 @@ class BookService
     public function __construct(
         private readonly BookRepository $bookRepository,
         private readonly AuthorRepository $authorRepository,
-        private readonly BookAuthorRepository $bookAuthorRepository
+        private readonly BookAuthorRepository $bookAuthorRepository,
+        private readonly StorageService $storageService
     ) {
     }
 
@@ -61,6 +63,8 @@ class BookService
         
         if ($coverImageFile !== null) {
             $book->coverImageFile = $coverImageFile;
+            $s3Path = $this->storageService->uploadFile($coverImageFile);
+            $book->cover_image = $s3Path;
         }
 
         if (!$this->bookRepository->save($book)) {
@@ -84,10 +88,13 @@ class BookService
     public function update(int $id, array $data, array $authorIds, ?UploadedFile $coverImageFile = null): Book
     {
         $book = $this->getById($id);
+        $oldCoverImage = $book->cover_image;
         $book->load($data);
 
         if ($coverImageFile !== null) {
             $book->coverImageFile = $coverImageFile;
+            $s3Path = $this->storageService->uploadFile($coverImageFile, $oldCoverImage);
+            $book->cover_image = $s3Path;
         }
 
         if (!$this->bookRepository->save($book)) {
@@ -108,8 +115,14 @@ class BookService
     public function delete(int $id): void
     {
         $book = $this->getById($id);
+        $coverImage = $book->cover_image;
+        
         if (!$this->bookRepository->delete($book)) {
             throw new ServiceException('Не удалось удалить книгу.');
+        }
+
+        if ($coverImage !== null && $coverImage !== '') {
+            $this->storageService->deleteFile($coverImage);
         }
     }
 
