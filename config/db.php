@@ -4,7 +4,7 @@
  * Database configuration
  * Автоматически определяет окружение: Docker или локальное
  */
-$isDocker = getenv('DOCKER_ENV') || (isset($_SERVER['DOCKER_ENV']) && $_SERVER['DOCKER_ENV']);
+$isDocker = ($_ENV['DOCKER_ENV'] ?? getenv('DOCKER_ENV')) || (isset($_SERVER['DOCKER_ENV']) && $_SERVER['DOCKER_ENV']);
 
 return [
     'class' => 'yii\db\Connection',
