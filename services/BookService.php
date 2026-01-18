@@ -6,39 +6,45 @@ namespace app\services;
 
 use app\exceptions\NotFoundException;
 use app\exceptions\ServiceException;
-use app\models\Book;
 use app\models\Author;
+use app\models\AuthorSubscription;
+use app\models\Book;
 use app\repositories\AuthorRepository;
+use app\repositories\AuthorSubscriptionRepository;
 use app\repositories\BookAuthorRepository;
 use app\repositories\BookRepository;
-use app\services\StorageService;
+use app\services\LocalStorageService;
+use app\services\notifications\EmailNotificationStrategy;
+use app\services\notifications\NotificationStrategyInterface;
+use app\services\notifications\SmsNotificationStrategy;
+use Yii;
 use yii\data\ActiveDataProvider;
 use yii\web\UploadedFile;
 
 class BookService
 {
+    private array $notificationStrategies = [];
+
     public function __construct(
         private readonly BookRepository $bookRepository,
         private readonly AuthorRepository $authorRepository,
         private readonly BookAuthorRepository $bookAuthorRepository,
-        private readonly StorageService $storageService
+        private readonly AuthorSubscriptionRepository $subscriptionRepository,
+        private readonly LocalStorageService $storageService,
+        SmsNotificationStrategy $smsStrategy,
+        EmailNotificationStrategy $emailStrategy
     ) {
+        $this->notificationStrategies = [
+            $smsStrategy,
+            $emailStrategy,
+        ];
     }
 
-    /**
-     * @param int $pageSize
-     * @return ActiveDataProvider
-     */
     public function getDataProvider(int $pageSize = 20): ActiveDataProvider
     {
         return $this->bookRepository->getDataProvider($pageSize);
     }
 
-    /**
-     * @param int $id
-     * @return Book
-     * @throws NotFoundException
-     */
     public function getById(int $id): Book
     {
         $book = $this->bookRepository->findByIdWithAuthors($id);
@@ -49,12 +55,6 @@ class BookService
         return $book;
     }
 
-    /**
-     * @param array $data
-     * @param array $authorIds
-     * @param UploadedFile|null $coverImageFile
-     * @return Book
-     */
     public function create(array $data, array $authorIds, ?UploadedFile $coverImageFile = null): Book
     {
         $book = new Book();
@@ -62,9 +62,14 @@ class BookService
         $book->load($data);
         
         if ($coverImageFile !== null) {
-            $book->coverImageFile = $coverImageFile;
-            $s3Path = $this->storageService->uploadFile($coverImageFile);
-            $book->cover_image = $s3Path;
+            $filePath = $this->storageService->uploadFile($coverImageFile);
+            $book->cover_image = $filePath;
+        }
+
+        if (!$book->validate()) {
+            $errors = $book->getFirstErrors();
+            $errorMessage = !empty($errors) ? reset($errors) : 'Ошибка валидации данных книги.';
+            throw new ServiceException($errorMessage);
         }
 
         if (!$this->bookRepository->save($book)) {
@@ -73,28 +78,33 @@ class BookService
 
         $this->bookAuthorRepository->replace($book->id, $authorIds);
 
+        $bookWithAuthors = $this->bookRepository->findByIdWithAuthors($book->id);
+        if ($bookWithAuthors !== null) {
+            $this->notifySubscribers($bookWithAuthors);
+
+            return $bookWithAuthors;
+        }
+
         return $book;
     }
 
-    /**
-     * @param int $id
-     * @param array $data
-     * @param array $authorIds
-     * @param UploadedFile|null $coverImageFile
-     * @return Book
-     * @throws NotFoundException
-     * @throws ServiceException
-     */
     public function update(int $id, array $data, array $authorIds, ?UploadedFile $coverImageFile = null): Book
     {
         $book = $this->getById($id);
         $oldCoverImage = $book->cover_image;
+        
+        unset($data['coverImageFile']);
         $book->load($data);
 
         if ($coverImageFile !== null) {
-            $book->coverImageFile = $coverImageFile;
-            $s3Path = $this->storageService->uploadFile($coverImageFile, $oldCoverImage);
-            $book->cover_image = $s3Path;
+            $filePath = $this->storageService->uploadFile($coverImageFile, $oldCoverImage);
+            $book->cover_image = $filePath;
+        }
+
+        if (!$book->validate()) {
+            $errors = $book->getFirstErrors();
+            $errorMessage = !empty($errors) ? reset($errors) : 'Ошибка валидации данных книги.';
+            throw new ServiceException($errorMessage);
         }
 
         if (!$this->bookRepository->save($book)) {
@@ -106,12 +116,6 @@ class BookService
         return $book;
     }
 
-    /**
-     * @param int $id
-     * @return void
-     * @throws NotFoundException
-     * @throws ServiceException
-     */
     public function delete(int $id): void
     {
         $book = $this->getById($id);
@@ -126,15 +130,43 @@ class BookService
         }
     }
 
-    /**
-     * @param Book $book
-     * @return array
-     */
     public function getSelectedAuthorIds(Book $book): array
     {
         return array_map(function ($author) {
             return $author->id;
         }, $book->authors);
+    }
+
+    private function notifySubscribers(Book $book): void
+    {
+        if (empty($book->authors)) {
+            return;
+        }
+
+        $authorsNames = $book->getAuthorsNames();
+        $subject = "Новая книга от {$authorsNames}";
+        $message = "Новая книга от {$authorsNames}: \"{$book->title}\" ({$book->year})";
+
+        foreach ($book->authors as $author) {
+            foreach ($this->subscriptionRepository->findByAuthorIdBatch($author->id) as $subscriptions) {
+                foreach ($subscriptions as $subscription) {
+                    $this->sendNotificationToSubscriber($subscription, $subject, $message, $author->id);
+                }
+            }
+        }
+    }
+
+    private function sendNotificationToSubscriber(
+        AuthorSubscription $subscription,
+        string $subject,
+        string $message,
+        int $authorId
+    ): void {
+        foreach ($this->notificationStrategies as $strategy) {
+            if ($strategy->canSend($subscription)) {
+                $strategy->send($subscription, $subject, $message);
+            }
+        }
     }
 
 }

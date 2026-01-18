@@ -8,28 +8,13 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
 
-/**
- * BookAuthor model (pivot table)
- *
- * @property int $book_id
- * @property int $author_id
- *
- * @property Book $book
- * @property Author $author
- */
 class BookAuthor extends ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName(): string
     {
         return '{{%book_author}}';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules(): array
     {
         return [
@@ -41,9 +26,6 @@ class BookAuthor extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels(): array
     {
         return [
@@ -52,21 +34,11 @@ class BookAuthor extends ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Book]]
-     *
-     * @return ActiveQuery
-     */
     public function getBook(): ActiveQuery
     {
         return $this->hasOne(Book::class, ['id' => 'book_id']);
     }
 
-    /**
-     * Gets query for [[Author]]
-     *
-     * @return ActiveQuery
-     */
     public function getAuthor(): ActiveQuery
     {
         return $this->hasOne(Author::class, ['id' => 'author_id']);

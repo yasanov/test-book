@@ -9,30 +9,13 @@ use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
 use yii\behaviors\TimestampBehavior;
 
-/**
- * Author model
- *
- * @property int $id
- * @property string $full_name
- * @property int $created_at
- * @property int $updated_at
- *
- * @property Book[] $books
- * @property AuthorSubscription[] $subscriptions
- */
 class Author extends ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName(): string
     {
         return '{{%authors}}';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
         return [
@@ -40,9 +23,6 @@ class Author extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules(): array
     {
         return [
@@ -53,9 +33,6 @@ class Author extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels(): array
     {
         return [
@@ -66,22 +43,12 @@ class Author extends ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Books]]
-     *
-     * @return ActiveQuery
-     */
     public function getBooks(): ActiveQuery
     {
         return $this->hasMany(Book::class, ['id' => 'book_id'])
             ->viaTable('{{%book_author}}', ['author_id' => 'id']);
     }
 
-    /**
-     * Gets query for [[Subscriptions]]
-     *
-     * @return ActiveQuery
-     */
     public function getSubscriptions(): ActiveQuery
     {
         return $this->hasMany(AuthorSubscription::class, ['author_id' => 'id']);

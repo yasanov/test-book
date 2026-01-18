@@ -10,39 +10,15 @@ use yii\db\ActiveQuery;
 use yii\behaviors\TimestampBehavior;
 use yii\web\UploadedFile;
 
-/**
- * Book model
- *
- * @property int $id
- * @property string $title
- * @property int $year
- * @property string|null $description
- * @property string|null $isbn
- * @property string|null $cover_image
- * @property int $created_at
- * @property int $updated_at
- *
- * @property Author[] $authors
- * @property UploadedFile|null $coverImageFile
- */
 class Book extends ActiveRecord
 {
-    /**
-     * @var UploadedFile|null
-     */
     public ?UploadedFile $coverImageFile = null;
 
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName(): string
     {
         return '{{%books}}';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
         return [
@@ -50,9 +26,6 @@ class Book extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules(): array
     {
         return [
@@ -69,9 +42,6 @@ class Book extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels(): array
     {
         return [
@@ -87,22 +57,27 @@ class Book extends ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Authors]]
-     *
-     * @return ActiveQuery
-     */
+    public function load($data, $formName = null): bool
+    {
+        $formName = $formName ?: $this->formName();
+        
+        if (isset($data[$formName]) && is_array($data[$formName])) {
+            unset($data[$formName]['coverImageFile']);
+        }
+        
+        if (isset($data['coverImageFile'])) {
+            unset($data['coverImageFile']);
+        }
+
+        return parent::load($data, $formName);
+    }
+
     public function getAuthors(): ActiveQuery
     {
         return $this->hasMany(Author::class, ['id' => 'author_id'])
             ->viaTable('{{%book_author}}', ['book_id' => 'id']);
     }
 
-    /**
-     * Gets authors names as string
-     *
-     * @return string
-     */
     public function getAuthorsNames(): string
     {
         $authors = $this->authors;
@@ -114,11 +89,6 @@ class Book extends ActiveRecord
         }, $authors));
     }
 
-    /**
-     * Gets cover image URL from S3
-     *
-     * @return string|null
-     */
     public function getCoverImageUrl(): ?string
     {
         if ($this->cover_image === null || $this->cover_image === '') {
@@ -126,7 +96,8 @@ class Book extends ActiveRecord
         }
 
         try {
-            $storageService = Yii::$container->get(\app\services\StorageService::class);
+            $storageService = Yii::$container->get(\app\services\LocalStorageService::class);
+
             return $storageService->getFileUrl($this->cover_image);
         } catch (\Exception $e) {
             Yii::error('Ошибка получения URL изображения: ' . $e->getMessage(), 'book');

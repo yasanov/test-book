@@ -6,7 +6,7 @@ namespace app\controllers;
 
 use Yii;
 use app\services\ReportService;
-use app\components\AccessHelper;
+use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 
@@ -21,15 +21,19 @@ class ReportController extends Controller
         parent::__construct($id, $module, $config);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
         return [
-            'access' => AccessHelper::withPermissions([
-                'top-authors' => 'viewReport',
-            ]),
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'actions' => ['top-authors'],
+                        'allow' => true,
+                        'roles' => ['?', '@'],
+                    ],
+                ],
+            ],
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
@@ -39,9 +43,6 @@ class ReportController extends Controller
         ];
     }
 
-    /**
-     * @return string
-     */
     public function actionTopAuthors(): string
     {
         $year = (int)(Yii::$app->request->get('year') ?? date('Y'));

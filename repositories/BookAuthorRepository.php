@@ -9,11 +9,6 @@ use Yii;
 
 class BookAuthorRepository
 {
-    /**
-     * @param int $bookId
-     * @return void
-     * @throws RepositoryException
-     */
     public function deleteByBookId(int $bookId): void
     {
         $result = Yii::$app->db->createCommand()
@@ -25,12 +20,6 @@ class BookAuthorRepository
         }
     }
 
-    /**
-     * @param int $bookId
-     * @param array $authorIds
-     * @return void
-     * @throws RepositoryException
-     */
     public function batchInsert(int $bookId, array $authorIds): void
     {
         if (empty($authorIds)) {
@@ -63,12 +52,6 @@ class BookAuthorRepository
         }
     }
 
-    /**
-     * @param int $bookId
-     * @param array $authorIds
-     * @return void
-     * @throws RepositoryException
-     */
     public function replace(int $bookId, array $authorIds): void
     {
         $this->deleteByBookId($bookId);

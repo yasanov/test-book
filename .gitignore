@@ -37,3 +37,7 @@ tests/_support/_generated
 
 # environment variables
 .env
+
+# uploaded files
+/web/uploads/*
+!/web/uploads/.gitkeep

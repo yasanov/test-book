@@ -8,25 +8,40 @@ use app\models\AuthorSubscription;
 
 class AuthorSubscriptionRepository
 {
-    /**
-     * @param AuthorSubscription $subscription
-     * @return bool
-     */
     public function save(AuthorSubscription $subscription): bool
     {
         return $subscription->save();
     }
 
-    /**
-     * @param int $authorId
-     * @param string $email
-     * @param string $phone
-     * @return bool
-     */
     public function exists(int $authorId, string $email, string $phone): bool
     {
-        return AuthorSubscription::find()
-            ->where(['author_id' => $authorId, 'email' => $email, 'phone' => $phone])
-            ->exists();
+        $query = AuthorSubscription::find()
+            ->where(['author_id' => $authorId]);
+
+        $conditions = ['or'];
+        
+        if (!empty($email)) {
+            $conditions[] = ['email' => $email];
+        }
+        
+        if (!empty($phone)) {
+            $conditions[] = ['phone' => $phone];
+        }
+
+        if (count($conditions) === 1) {
+            return false;
+        }
+
+        return $query->andWhere($conditions)->exists();
+    }
+
+    public function findByAuthorIdBatch(int $authorId, int $batchSize = 100): \Generator
+    {
+        $query = AuthorSubscription::find()
+            ->where(['author_id' => $authorId]);
+
+        foreach ($query->batch($batchSize) as $subscriptions) {
+            yield $subscriptions;
+        }
     }
 }

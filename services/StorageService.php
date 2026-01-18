@@ -35,8 +35,16 @@ class StorageService
                 'key' => $s3Config['accessKey'],
                 'secret' => $s3Config['secretKey'],
             ],
-            'use_path_style_endpoint' => false,
+            'use_path_style_endpoint' => true,
+            'signature_version' => 'v4',
         ]);
+
+        // Проверяем доступность bucket
+        try {
+            $this->s3Client->headBucket(['Bucket' => $this->bucket]);
+        } catch (AwsException $e) {
+            Yii::error('Ошибка доступа к bucket "' . $this->bucket . '": ' . $e->getMessage(), 'storage');
+        }
     }
 
     /**
@@ -57,17 +65,37 @@ class StorageService
             }
 
             // Загружаем файл в S3
-            $result = $this->s3Client->putObject([
+            $putObjectParams = [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'Body' => file_get_contents($file->tempName),
-                'ContentType' => $file->type,
-                'ACL' => 'public-read',
-            ]);
+                'ContentType' => $file->type ?: 'application/octet-stream',
+            ];
+
+            // Для Yandex Object Storage ACL может не поддерживаться или требовать специальных настроек
+            // Убираем ACL, если bucket настроен на публичный доступ через bucket policy
+            // 'ACL' => 'public-read',
+
+            $result = $this->s3Client->putObject($putObjectParams);
 
             return $key;
         } catch (AwsException $e) {
-            throw new ServiceException('Ошибка загрузки файла в S3: ' . $e->getMessage());
+            $errorDetails = [
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+                'Error Code' => $e->getAwsErrorCode(),
+                'Error Message' => $e->getAwsErrorMessage(),
+                'Request ID' => $e->getAwsRequestId(),
+            ];
+            
+            Yii::error('Ошибка загрузки файла в S3: ' . json_encode($errorDetails, JSON_UNESCAPED_UNICODE), 'storage');
+            
+            $message = 'Ошибка загрузки файла в S3: ' . $e->getAwsErrorMessage();
+            if ($e->getAwsErrorCode() === 'AccessDenied') {
+                $message .= '. Проверьте права доступа сервисного аккаунта к bucket "' . $this->bucket . '"';
+            }
+            
+            throw new ServiceException($message);
         }
     }
 

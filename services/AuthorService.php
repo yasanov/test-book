@@ -17,20 +17,11 @@ class AuthorService
     ) {
     }
 
-    /**
-     * @param int $pageSize
-     * @return ActiveDataProvider
-     */
     public function getDataProvider(int $pageSize = 20): ActiveDataProvider
     {
         return $this->authorRepository->getDataProvider($pageSize);
     }
 
-    /**
-     * @param int $id
-     * @return Author
-     * @throws NotFoundException
-     */
     public function getById(int $id): Author
     {
         $author = $this->authorRepository->findByIdWithBooks($id);
@@ -41,10 +32,6 @@ class AuthorService
         return $author;
     }
 
-    /**
-     * @param array $data
-     * @return Author
-     */
     public function create(array $data): Author
     {
         $author = new Author();
@@ -58,13 +45,6 @@ class AuthorService
         return $author;
     }
 
-    /**
-     * @param int $id
-     * @param array $data
-     * @return Author
-     * @throws NotFoundException
-     * @throws ServiceException
-     */
     public function update(int $id, array $data): Author
     {
         $author = $this->getById($id);
@@ -77,12 +57,6 @@ class AuthorService
         return $author;
     }
 
-    /**
-     * @param int $id
-     * @return void
-     * @throws NotFoundException
-     * @throws ServiceException
-     */
     public function delete(int $id): void
     {
         $author = $this->getById($id);

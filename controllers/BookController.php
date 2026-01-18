@@ -8,8 +8,9 @@ use Yii;
 use app\exceptions\NotFoundException;
 use app\models\Book;
 use app\services\BookService;
-use app\components\AccessHelper;
+use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+use yii\validators\ImageValidator;
 use yii\web\Controller;
 use yii\web\Response;
 use yii\web\UploadedFile;
@@ -25,14 +26,35 @@ class BookController extends Controller
         parent::__construct($id, $module, $config);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
-
         return [
-            'access' => AccessHelper::crudAccess('book', ['index', 'view', 'create', 'update', 'delete']),
+            'access' => [
+                'class' => AccessControl::class,
+                'only' => ['index', 'view', 'create', 'update', 'delete'],
+                'rules' => [
+                    [
+                        'actions' => ['index', 'view'],
+                        'allow' => true,
+                        'roles' => ['?', '@'],
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['createBook'],
+                    ],
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['updateBook'],
+                    ],
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['deleteBook'],
+                    ],
+                ],
+            ],
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
@@ -42,9 +64,6 @@ class BookController extends Controller
         ];
     }
 
-    /**
-     * @return string
-     */
     public function actionIndex(): string
     {
         $dataProvider = $this->bookService->getDataProvider();
@@ -54,11 +73,6 @@ class BookController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return string
-     * @throws NotFoundException
-     */
     public function actionView(int $id): string
     {
         $model = $this->bookService->getById($id);
@@ -68,9 +82,6 @@ class BookController extends Controller
         ]);
     }
 
-    /**
-     * @return string|Response
-     */
     public function actionCreate(): string|Response
     {
         $model = new Book();
@@ -79,6 +90,8 @@ class BookController extends Controller
         if (Yii::$app->request->post()) {
             try {
                 $coverImageFile = UploadedFile::getInstance($model, 'coverImageFile');
+                $this->validateImageFile($coverImageFile);
+                
                 $authorIds = Yii::$app->request->post('author_ids', []);
                 
                 $book = $this->bookService->create(
@@ -101,11 +114,6 @@ class BookController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return string|Response
-     * @throws NotFoundException
-     */
     public function actionUpdate(int $id): string|Response
     {
         $book = $this->bookService->getById($id);
@@ -113,6 +121,8 @@ class BookController extends Controller
         if (Yii::$app->request->post()) {
             try {
                 $coverImageFile = UploadedFile::getInstance($book, 'coverImageFile');
+                $this->validateImageFile($coverImageFile);
+                
                 $authorIds = Yii::$app->request->post('author_ids', []);
                 
                 $book = $this->bookService->update(
@@ -138,11 +148,6 @@ class BookController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return Response
-     * @throws NotFoundException
-     */
     public function actionDelete(int $id): Response
     {
         try {
@@ -153,5 +158,21 @@ class BookController extends Controller
         }
 
         return $this->redirect(['index']);
+    }
+
+    private function validateImageFile(?UploadedFile $file): void
+    {
+        if ($file === null) {
+            return;
+        }
+
+        $model = new Book();
+        $model->coverImageFile = $file;
+
+        if (!$model->validate(['coverImageFile'])) {
+            $errors = $model->getErrors('coverImageFile');
+            $errorMessage = !empty($errors) ? implode(', ', $errors) : 'Неизвестная ошибка валидации файла';
+            throw new \yii\base\Exception('Ошибка валидации файла: ' . $errorMessage);
+        }
     }
 }

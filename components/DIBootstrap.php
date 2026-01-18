@@ -11,23 +11,19 @@ use app\repositories\BookRepository;
 use app\repositories\ReportRepository;
 use app\services\AuthorService;
 use app\services\BookService;
+use app\services\EmailService;
+use app\services\LocalStorageService;
+use app\services\notifications\EmailNotificationStrategy;
+use app\services\notifications\SmsNotificationStrategy;
 use app\services\ReportService;
-use app\services\StorageService;
+use app\services\SmsService;
 use app\services\SubscriptionService;
 use Yii;
 
-/**
- * Bootstrap component for Dependency Injection configuration
- */
 class DIBootstrap implements \yii\base\BootstrapInterface
 {
-    /**
-     * @param \yii\base\Application $app
-     * @return void
-     */
     public function bootstrap($app): void
     {
-        // Register repositories as singletons
         Yii::$container->setSingletons([
             BookRepository::class => BookRepository::class,
             AuthorRepository::class => AuthorRepository::class,
@@ -36,15 +32,29 @@ class DIBootstrap implements \yii\base\BootstrapInterface
             ReportRepository::class => ReportRepository::class,
         ]);
 
-        // Register services with dependencies
         Yii::$container->setDefinitions([
-            StorageService::class => StorageService::class,
+            LocalStorageService::class => LocalStorageService::class,
+            SmsService::class => SmsService::class,
+            EmailService::class => EmailService::class,
+            SmsNotificationStrategy::class => function ($container) {
+                return new SmsNotificationStrategy(
+                    $container->get(SmsService::class)
+                );
+            },
+            EmailNotificationStrategy::class => function ($container) {
+                return new EmailNotificationStrategy(
+                    $container->get(EmailService::class)
+                );
+            },
             BookService::class => function ($container, $params, $config) {
                 return new BookService(
                     $container->get(BookRepository::class),
                     $container->get(AuthorRepository::class),
                     $container->get(BookAuthorRepository::class),
-                    $container->get(StorageService::class)
+                    $container->get(AuthorSubscriptionRepository::class),
+                    $container->get(LocalStorageService::class),
+                    $container->get(SmsNotificationStrategy::class),
+                    $container->get(EmailNotificationStrategy::class)
                 );
             },
             AuthorService::class => function ($container, $params, $config) {

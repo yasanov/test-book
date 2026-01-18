@@ -9,60 +9,47 @@ use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
 use yii\behaviors\TimestampBehavior;
 
-/**
- * AuthorSubscription model
- *
- * @property int $id
- * @property int $author_id
- * @property string $email
- * @property string $phone
- * @property int $created_at
- *
- * @property Author $author
- */
 class AuthorSubscription extends ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName(): string
     {
         return '{{%author_subscriptions}}';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
         return [
             [
                 'class' => TimestampBehavior::class,
-                'updatedAtAttribute' => false, // Только created_at
+                'updatedAtAttribute' => false,
             ],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules(): array
     {
         return [
-            [['author_id', 'email', 'phone'], 'required'],
+            [['author_id'], 'required'],
             [['author_id', 'created_at'], 'integer'],
             [['email'], 'string', 'max' => 255],
-            [['email'], 'email'],
+            [['email'], 'email', 'skipOnEmpty' => true],
             [['phone'], 'string', 'max' => 20],
-            [['phone'], 'match', 'pattern' => '/^[\d\s\-\+\(\)]+$/', 'message' => 'Некорректный формат телефона'],
-            [['author_id', 'email', 'phone'], 'unique', 'targetAttribute' => ['author_id', 'email', 'phone'], 'message' => 'Вы уже подписаны на этого автора'],
+            [['phone'], 'match', 'pattern' => '/^[\d\s\-\+\(\)]+$/', 'message' => 'Некорректный формат телефона', 'skipOnEmpty' => true],
+            [['email', 'phone'], 'validateAtLeastOne', 'skipOnEmpty' => false],
             [['author_id'], 'exist', 'skipOnError' => true, 'targetClass' => Author::class, 'targetAttribute' => ['author_id' => 'id']],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    public function validateAtLeastOne(string $attribute, array $params): void
+    {
+        $email = trim($this->email ?? '');
+        $phone = trim($this->phone ?? '');
+
+        if (empty($email) && empty($phone)) {
+            $this->addError($attribute, 'Необходимо указать хотя бы одно из полей: Email или Телефон.');
+        }
+    }
+
     public function attributeLabels(): array
     {
         return [
@@ -74,11 +61,6 @@ class AuthorSubscription extends ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Author]]
-     *
-     * @return ActiveQuery
-     */
     public function getAuthor(): ActiveQuery
     {
         return $this->hasOne(Author::class, ['id' => 'author_id']);

@@ -8,10 +8,6 @@ use yii\db\Query;
 
 class ReportRepository
 {
-    /**
-     * @param int $year
-     * @return array
-     */
     public function getTopAuthorsByYear(int $year): array
     {
         return (new Query())

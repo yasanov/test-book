@@ -16,9 +16,9 @@ $model->author_id = $author->id;
     'method' => 'post',
 ]); ?>
 
-<?= $form->field($model, 'email')->textInput(['type' => 'email', 'maxlength' => true]) ?>
+<?= $form->field($model, 'email')->textInput(['type' => 'email', 'maxlength' => true])->hint('Укажите email или телефон (хотя бы одно поле обязательно)') ?>
 
-<?= $form->field($model, 'phone')->textInput(['maxlength' => true]) ?>
+<?= $form->field($model, 'phone')->textInput(['maxlength' => true])->hint('Укажите телефон или email (хотя бы одно поле обязательно)') ?>
 
 <?= Html::activeHiddenInput($model, 'author_id') ?>
 

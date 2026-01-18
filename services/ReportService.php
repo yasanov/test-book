@@ -13,10 +13,6 @@ class ReportService
     ) {
     }
 
-    /**
-     * @param int $year
-     * @return array
-     */
     public function getTopAuthorsByYear(int $year): array
     {
         return $this->reportRepository->getTopAuthorsByYear($year);

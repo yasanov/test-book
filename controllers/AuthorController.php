@@ -8,7 +8,7 @@ use Yii;
 use app\exceptions\NotFoundException;
 use app\models\Author;
 use app\services\AuthorService;
-use app\components\AccessHelper;
+use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
@@ -24,14 +24,35 @@ class AuthorController extends Controller
         parent::__construct($id, $module, $config);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
-
         return [
-            'access' => AccessHelper::crudAccess('author', ['index', 'view', 'create', 'update', 'delete', 'list']),
+            'access' => [
+                'class' => AccessControl::class,
+                'only' => ['index', 'view', 'create', 'update', 'delete', 'list'],
+                'rules' => [
+                    [
+                        'actions' => ['index', 'view', 'list'],
+                        'allow' => true,
+                        'roles' => ['?', '@'],
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['createAuthor'],
+                    ],
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['updateAuthor'],
+                    ],
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['deleteAuthor'],
+                    ],
+                ],
+            ],
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
@@ -41,9 +62,6 @@ class AuthorController extends Controller
         ];
     }
 
-    /**
-     * @return string
-     */
     public function actionIndex(): string
     {
         $dataProvider = $this->authorService->getDataProvider();
@@ -53,9 +71,6 @@ class AuthorController extends Controller
         ]);
     }
 
-    /**
-     * @return Response
-     */
     public function actionList(): Response
     {
         $dataProvider = $this->authorService->getDataProvider(50);
@@ -76,11 +91,6 @@ class AuthorController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return string
-     * @throws NotFoundException
-     */
     public function actionView(int $id): string
     {
         $model = $this->authorService->getById($id);
@@ -90,9 +100,6 @@ class AuthorController extends Controller
         ]);
     }
 
-    /**
-     * @return string|Response
-     */
     public function actionCreate(): string|Response
     {
         $model = new Author();
@@ -115,11 +122,6 @@ class AuthorController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return string|Response
-     * @throws NotFoundException
-     */
     public function actionUpdate(int $id): string|Response
     {
         $author = $this->authorService->getById($id);
@@ -140,11 +142,6 @@ class AuthorController extends Controller
         ]);
     }
 
-    /**
-     * @param int $id
-     * @return Response
-     * @throws NotFoundException
-     */
     public function actionDelete(int $id): Response
     {
         try {

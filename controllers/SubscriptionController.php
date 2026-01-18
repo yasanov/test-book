@@ -7,7 +7,7 @@ namespace app\controllers;
 use Yii;
 use app\exceptions\NotFoundException;
 use app\services\SubscriptionService;
-use app\components\AccessHelper;
+use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
@@ -23,13 +23,20 @@ class SubscriptionController extends Controller
         parent::__construct($id, $module, $config);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors(): array
     {
         return [
-            'access' => AccessHelper::guestOnly(['subscribe']),
+            'access' => [
+                'class' => AccessControl::class,
+                'only' => ['subscribe'],
+                'rules' => [
+                    [
+                        'actions' => ['subscribe'],
+                        'allow' => true,
+                        'roles' => ['?'],
+                    ],
+                ],
+            ],
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
@@ -39,11 +46,6 @@ class SubscriptionController extends Controller
         ];
     }
 
-    /**
-     * @param int $authorId
-     * @return Response
-     * @throws NotFoundException
-     */
     public function actionSubscribe(int $authorId): Response
     {
         try {

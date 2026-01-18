@@ -18,13 +18,6 @@ class SubscriptionService
     ) {
     }
 
-    /**
-     * @param int $authorId
-     * @param array $data
-     * @return AuthorSubscription
-     * @throws NotFoundException
-     * @throws ServiceException
-     */
     public function subscribe(int $authorId, array $data): AuthorSubscription
     {
         $author = $this->authorRepository->findById($authorId);
@@ -36,21 +29,20 @@ class SubscriptionService
         $subscription->author_id = $authorId;
         $subscription->load($data);
 
-        // Проверка на дубликаты перед валидацией
-        $email = $subscription->email ?? '';
-        $phone = $subscription->phone ?? '';
-        if ($email && $phone && $this->subscriptionRepository->exists($authorId, $email, $phone)) {
-            throw new ServiceException('Вы уже подписаны на этого автора с данным email и телефоном.');
+        $email = trim($subscription->email ?? '');
+        $phone = trim($subscription->phone ?? '');
+        if ($email || $phone) {
+            if ($this->subscriptionRepository->exists($authorId, $email, $phone)) {
+                throw new ServiceException('Вы уже подписаны на этого автора с данным email и/или телефоном.');
+            }
         }
 
-        // Валидация данных
         if (!$subscription->validate()) {
             $errors = $subscription->getFirstErrors();
             $errorMessage = !empty($errors) ? reset($errors) : 'Ошибка валидации данных подписки.';
             throw new ServiceException($errorMessage);
         }
 
-        // Сохранение
         if (!$this->subscriptionRepository->save($subscription)) {
             $errors = $subscription->getFirstErrors();
             $errorMessage = !empty($errors) ? reset($errors) : 'Не удалось создать подписку.';
