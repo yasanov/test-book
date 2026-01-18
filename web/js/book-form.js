@@ -37,8 +37,9 @@
                     $('#authors-list').append(btnHtml);
                 }
             },
-            error: () => {
-                $('#authors-list').html('<p class="text-danger">Ошибка загрузки авторов</p>');
+            error: (xhr, status, error) => {
+                console.error('Ошибка загрузки авторов:', { xhr, status, error, url: authorsListUrl });
+                $('#authors-list').html(`<p class="text-danger">Ошибка загрузки авторов: ${error || status}</p>`);
             }
         });
     };
@@ -48,11 +49,21 @@
     $(document).ready(() => {
         const $authorsList = $('#authors-list');
         if ($authorsList.length) {
-            authorsSelectedIds = JSON.parse($authorsList.data('selected-ids') || '[]');
-            authorsListUrl = $authorsList.data('list-url') || '';
+            try {
+                const selectedIdsAttr = $authorsList.attr('data-selected-ids') || '[]';
+                authorsSelectedIds = JSON.parse(selectedIdsAttr);
+            } catch (e) {
+                console.error('Ошибка парсинга selected-ids:', e, 'Значение:', $authorsList.attr('data-selected-ids'));
+                authorsSelectedIds = [];
+            }
+
+            authorsListUrl = $authorsList.attr('data-list-url') || '';
 
             if (authorsListUrl) {
                 loadAuthors(1, false);
+            } else {
+                console.error('URL для загрузки авторов не найден');
+                $('#authors-list').html('<p class="text-danger">URL для загрузки авторов не настроен</p>');
             }
         }
     });

@@ -48,10 +48,20 @@ $this->params['breadcrumbs'][] = $this->title;
         </ul>
     <?php endif; ?>
 
-    <?php if (Yii::$app->user->isGuest): ?>
-        <hr>
-        <h3>Подписаться на уведомления о новых книгах</h3>
-        <?= $this->render('_subscription', ['author' => $model]) ?>
-    <?php endif; ?>
+    <hr>
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3 class="mb-0">Подписаться на уведомления о новых книгах</h3>
+        </div>
+        <div class="card-body">
+            <?php if (Yii::$app->user->isGuest): ?>
+                <p class="text-muted">Укажите ваш email или телефон (хотя бы одно поле обязательно), чтобы получать SMS-уведомления о новых книгах этого автора.</p>
+                <?= $this->render('_subscription', ['author' => $model]) ?>
+            <?php else: ?>
+                <p class="text-muted">Подписка на уведомления доступна только для неавторизованных пользователей. 
+                <?= Html::a('Выйти из системы', ['site/logout'], ['class' => 'btn btn-sm btn-outline-secondary']) ?> для подписки.</p>
+            <?php endif; ?>
+        </div>
+    </div>
 
 </div>
